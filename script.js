@@ -1,14 +1,11 @@
 const grid = document.getElementById('gameBoard');
 const levelBtn = document.getElementById('levelButtons');
-const begLevel = document.getElementById('levelBeginner');
-const intLevel = document.getElementById('levelIntermediate');
-const expLevel = document.getElementById('levelExpert');
 const textInfo = document.getElementById('infoText');
 const reset = document.getElementById("resetGame");
 const applesInfo = document.getElementById("apples");
 const start = document.getElementById("startButton");
-let rows, cols, gridMatrix = [], appleSign = "🍎", snakeSign = "⏹", appleX = 5, appleY = 5, 
-snakeStartPos, snakeX, snakeY, intervalSet, eatenApples = 0, snakeSpeed, snake = [], isApple = false, nextPos;
+let rows, cols, gridMatrix = [], snakeElements = [], appleSign = "🍎", snakeSign = "⏹", appleX = 5, appleY = 5, 
+snakeX, snakeY, intervalSet, eatenApples = 0, snakeSpeed;
 
 function generateGameBoard(id) {
 	levelBtn.hidden = true;
@@ -34,17 +31,16 @@ function generateGameBoard(id) {
 			cell.id = r + '-' + c;
 		}
 	}
-	generateMatrix(rows, cols);
-	snakeStartPos = Math.floor(rows / 2);
-	snakeX = snakeStartPos;
-	snakeY = snakeStartPos;
-	snake.unshift(`${snakeX}-${snakeY}`);
+	generateMatrix();
+	snakeX = Math.floor(rows / 2);
+	snakeY = snakeX;
+	snakeElements.unshift(`${snakeX}-${snakeY}`);
 	gridMatrix[snakeX][snakeY] = snakeSign;
 	gridMatrix[appleX][appleY] = appleSign;
 	updateGameBoard();
 }
 
-function generateMatrix(rows, cols) {
+function generateMatrix() {
 	for (let i = 0; i < rows; i++) {
   		gridMatrix[i] = [];
   		for (let j = 0; j < cols; j++) {
@@ -53,21 +49,91 @@ function generateMatrix(rows, cols) {
 	}
 }
 
+function startGame() {
+	start.hidden = true;
+	addEventListener('keydown', keyPressed, true);
+	intervalSet = setInterval(() => {
+		if (snakeY < cols - 1) {
+			snakeElements.pop();
+			snakeElements.unshift(`${snakeX}-${snakeY + 1}`);
+			updateGameBoard();
+			++snakeY;
+		} else {
+			gameOver();
+		}		
+	}, snakeSpeed);
+}
+
+function keyPressed(event) {
+	let direction;
+	if (event.code === "ArrowUp") {
+		direction = "up";
+		if (snakeX === 0) {
+			gameOver();
+		} else {
+			changeDirection(direction);
+		}
+	} else if (event.code === "ArrowDown") {
+		direction = "down";	
+		if (snakeX === rows - 1) {
+			gameOver();
+		} else {
+			changeDirection(direction);
+		}
+	} else if (event.code === "ArrowLeft") {
+		direction = "left";
+		if (snakeY === 0) {
+			gameOver();
+		} else {
+			changeDirection(direction);
+		}
+	} else if (event.code === "ArrowRight") {
+		direction = "right";	
+		if (snakeY === cols - 1) {
+			gameOver();
+		} else {
+			changeDirection(direction);
+		}
+	}	
+}
+
 function newApplePos() {
 	return Math.floor(Math.random() * rows);
+}
+
+function eatApples(x, y) {
+	if (snakeX + x === appleX && snakeY + y === appleY) {
+		++eatenApples;
+		snakeElements.unshift(`${snakeX + x}-${snakeY + y}`);
+		snakeSpeed -= 5;
+		appleX = newApplePos();
+		appleY = newApplePos();
+		let lg = snakeElements.length;
+		for (let i = 0; i < lg; ++i) {
+			if (snakeElements[i].split('-')[0] === appleX && snakeElements[i].split('-')[1] === appleY) {
+				appleX = newApplePos();
+				appleY = newApplePos();
+				i = 0;
+			}
+		}
+		gridMatrix[appleX][appleY] = appleSign;
+	} else {
+		snakeElements.pop();
+		snakeElements.unshift(`${snakeX + x}-${snakeY + y}`);
+	}
 }
 
 function updateMatrix() {
 	let row, col;
 	for (let i = 0; i <= eatenApples; ++i) {
-		row = snake[i].split('-')[0];
-		col = snake[i].split('-')[1];
+		row = snakeElements[i].split('-')[0];
+		col = snakeElements[i].split('-')[1];
 		gridMatrix[row][col] = snakeSign;
 	}
 }
 
 function updateGameBoard() {
-	generateMatrix(rows, cols);
+	generateMatrix();
 	updateMatrix();
 	gridMatrix[appleX][appleY] = appleSign;	
 	applesInfo.innerHTML = `Eaten apples: ${eatenApples}`;
@@ -78,272 +144,97 @@ function updateGameBoard() {
 	}
 }
 
-function keyPressed(event) {
-	if (event.code === "ArrowUp") {
-		if (snakeX === 0) {
+function changeDirection(direction) {
+	let x, y;
+	if (direction === "up") {
+		x = -1;
+		y = 0;
+	} else if (direction === "down") {
+		x = 1;
+		y = 0;
+	} else if (direction === "left") {
+		x = 0;
+		y = -1;
+	} else if (direction === "right") {
+		x = 0;
+		y = 1;
+	}
+	let nextPos;
+	for (let pos of snakeElements) {
+		nextPos = `${snakeX + x}-${snakeY + y}`;
+		if (pos === nextPos) {
 			gameOver();
-		} else {
-			for (let pos of snake) {
-				nextPos = `${snakeX - 1}-${snakeY}`;
+		}
+	}
+	eatApples(x, y);
+	updateGameBoard();
+	snakeX += x;
+	snakeY += y;
+	clearInterval(intervalSet);
+	if (direction === "up") {
+		x = -1;
+		y = 0;
+		intervalSet = setInterval(() => {
+			let nextPos;
+			for (let pos of snakeElements) {
+				nextPos = `${snakeX + x}-${snakeY + y}`;
 				if (pos === nextPos) {
 					gameOver();
 				}
 			}
-			if (snakeX - 1 === appleX && snakeY === appleY) {
-			 	//document.getElementById(`${snakeX - 1}-${snakeY}`).innerHTML = snakeSign;
-				++eatenApples;
-				snake.unshift(`${snakeX - 1}-${snakeY}`);
-				snakeSpeed -= 5;
-				appleX = newApplePos();
-				appleY = newApplePos();
-				for (let pos of snake) {
-					if (pos.split('-')[0] === appleX && pos.split('-')[1] === appleY) {
-						appleX = newApplePos();
-						appleY = newApplePos();
-					}
-				}
-				gridMatrix[appleX][appleY] = appleSign;	
+			if (snakeX === 0) {
+				gameOver();
 			} else {
-				snake.pop();
-				snake.unshift(`${snakeX - 1}-${snakeY}`);
+				eatApples(x, y);
+				updateGameBoard();
+				snakeX += x;
+				snakeY += y;
 			}
-			updateGameBoard();
-			--snakeX;
-			clearInterval(intervalSet);
-			intervalSet = setInterval(() => {
-				for (let pos of snake) {
-					nextPos = `${snakeX - 1}-${snakeY}`;
-					if (pos === nextPos) {
-						gameOver();
-					}
-				}
-				if (snakeX > 0) {
-					if (snakeX - 1 === appleX && snakeY === appleY) {
-						//document.getElementById(`${snakeX - 1}-${snakeY}`).innerHTML = snakeSign;
-						++eatenApples;
-						snake.unshift(`${snakeX - 1}-${snakeY}`);
-						snakeSpeed -= 5;
-						appleX = newApplePos();
-						appleY = newApplePos();
-						for (let pos of snake) {
-							if (pos.split('-')[0] === appleX && pos.split('-')[1] === appleY) {
-								appleX = newApplePos();
-								appleY = newApplePos();
-							}
-						}
-						gridMatrix[appleX][appleY] = appleSign;
-					} else {
-						snake.pop();
-						snake.unshift(`${snakeX - 1}-${snakeY}`);
-					}
-					updateGameBoard();
-					--snakeX;
-				} else {
-					gameOver();
-				}
-			}, snakeSpeed);
-		}
-	} else if (event.code === "ArrowDown") {	
-		if (snakeX === rows - 1) {
-			gameOver();
-		} else {
-			for (let pos of snake) {
-				nextPos = `${snakeX + 1}-${snakeY}`;
-				if (pos === nextPos) {
-					gameOver();
-				}
-			}
-			if (snakeX + 1 === appleX && snakeY === appleY) {
-				//document.getElementById(`${snakeX + 1}-${snakeY}`).innerHTML = snakeSign;
-				++eatenApples;
-				snake.unshift(`${snakeX + 1}-${snakeY}`);
-				snakeSpeed -= 5;
-				appleX = newApplePos();
-				appleY = newApplePos();
-				gridMatrix[appleX][appleY] = appleSign;
+		}, snakeSpeed);
+	} else if (direction === "down") {
+		x = 1;
+		y = 0;
+		intervalSet = setInterval(() => {
+			if (snakeX === rows - 1) {
+				gameOver();
 			} else {
-				snake.pop();
-				snake.unshift(`${snakeX + 1}-${snakeY}`);
+				eatApples(x, y);
+				updateGameBoard();
+				snakeX += x;
+				snakeY += y;
 			}
-			updateGameBoard();
-			++snakeX;
-			clearInterval(intervalSet);
-			intervalSet = setInterval(() => {
-				for (let pos of snake) {
-					nextPos = `${snakeX + 1}-${snakeY}`;
-					if (pos === nextPos) {
-						gameOver();
-					}
-				}
-				if (snakeX < rows - 1) {
-					if (snakeX + 1 === appleX && snakeY === appleY) {
-						document.getElementById(`${snakeX + 1}-${snakeY}`).innerHTML = snakeSign;
-						++eatenApples;
-						snake.unshift(`${snakeX + 1}-${snakeY}`);
-						snakeSpeed -= 5;
-						appleX = newApplePos();
-						appleY = newApplePos();
-						for (let pos of snake) {
-						if (pos.split('-')[0] === appleX && pos.split('-')[1] === appleY) {
-							appleX = newApplePos();
-							appleY = newApplePos();
-						}
-					}
-						gridMatrix[appleX][appleY] = appleSign;
-					} else {
-						snake.pop();
-						snake.unshift(`${snakeX + 1}-${snakeY}`);
-					}
-					updateGameBoard();
-					++snakeX;
-				} else {
-					gameOver();
-				}	
-			}, snakeSpeed);
-		}
-	} else if (event.code === "ArrowLeft") {
-		if (snakeY === 0) {
-			gameOver();
-		} else {
-			for (let pos of snake) {
-				nextPos = `${snakeX}-${snakeY - 1}`;
-				if (pos === nextPos) {
-					gameOver();
-				}
-			}
-			if (snakeX === appleX && snakeY - 1 === appleY) {
-				document.getElementById(`${snakeX}-${snakeY - 1}`).innerHTML = snakeSign;
-				++eatenApples;
-				snake.unshift(`${snakeX}-${snakeY - 1}`);
-				snakeSpeed -= 5;
-				appleX = newApplePos();
-				appleY = newApplePos();
-				gridMatrix[appleX][appleY] = appleSign;
+		}, snakeSpeed);
+	} else if (direction === "left") {
+		x = 0;
+		y = -1;
+		intervalSet = setInterval(() => {
+			if (snakeY === 0) {
+				gameOver();
 			} else {
-				snake.pop();
-				snake.unshift(`${snakeX}-${snakeY - 1}`);
+				eatApples(x, y);
+				updateGameBoard();
+				snakeX += x;
+				snakeY += y;
 			}
-			updateGameBoard();
-			--snakeY;
-			clearInterval(intervalSet);
-			intervalSet = setInterval(() => {
-				for (let pos of snake) {
-					nextPos = `${snakeX}-${snakeY - 1}`;
-					if (pos === nextPos) {
-						gameOver();
-					}
-				}
-				if (snakeY > 0) {
-					if (snakeX === appleX && snakeY - 1 === appleY) {
-						document.getElementById(`${snakeX}-${snakeY - 1}`).innerHTML = snakeSign;
-						++eatenApples;
-						snake.unshift(`${snakeX}-${snakeY - 1}`);
-						snakeSpeed -= 5;
-						appleX = newApplePos();
-						appleY = newApplePos();
-						for (let pos of snake) {
-							if (pos.split('-')[0] === appleX && pos.split('-')[1] === appleY) {
-								appleX = newApplePos();
-								appleY = newApplePos();
-							}
-						}
-						gridMatrix[appleX][appleY] = appleSign;
-					} else {
-						snake.pop();
-						snake.unshift(`${snakeX}-${snakeY - 1}`);
-					}
-					updateGameBoard();
-					--snakeY;
-				} else {	
-					gameOver();
-				}	
-			}, snakeSpeed);
-		}
-	} else if (event.code === "ArrowRight") {		
-		if (snakeY === cols - 1) {
-			gameOver();
-		} else {
-			for (let pos of snake) {
-				nextPos = `${snakeX}-${snakeY + 1}`;
-				if (pos === nextPos) {
-					gameOver();
-				}
-			}
-			if (snakeX === appleX && snakeY + 1 === appleY) {
-				document.getElementById(`${snakeX}-${snakeY + 1}`).innerHTML = snakeSign;
-				++eatenApples;
-				snake.unshift(`${snakeX}-${snakeY + 1}`);
-				snakeSpeed -= 5;
-				appleX = newApplePos();
-				appleY = newApplePos();
-				for (let pos of snake) {
-					if (pos.split('-')[0] === appleX && pos.split('-')[1] === appleY) {
-						appleX = newApplePos();
-						appleY = newApplePos();
-					}
-				}
-				gridMatrix[appleX][appleY] = appleSign;
+		}, snakeSpeed);
+	} else if (direction === "right") {
+		x = 0;
+		y = 1;
+		intervalSet = setInterval(() => {
+			if (snakeY === cols - 1) {
+				gameOver();
 			} else {
-				snake.pop();
-				snake.unshift(`${snakeX}-${snakeY + 1}`);
+				eatApples(x, y);
+				updateGameBoard();
+				snakeX += x;
+				snakeY += y;
 			}
-			updateGameBoard();
-			++snakeY;
-			clearInterval(intervalSet);
-			intervalSet = setInterval(() => {
-				for (let pos of snake) {
-					nextPos = `${snakeX}-${snakeY + 1}`;
-					if (pos === nextPos) {
-						gameOver();
-					}
-				}
-				if (snakeY < cols - 1) {
-					if (snakeX === appleX && snakeY + 1 === appleY) {
-						document.getElementById(`${snakeX}-${snakeY + 1}`).innerHTML = snakeSign;
-						++eatenApples;
-						snake.unshift(`${snakeX}-${snakeY + 1}`);
-						snakeSpeed -= 5;
-						appleX = newApplePos();
-						appleY = newApplePos();
-						for (let pos of snake) {
-							if (pos.split('-')[0] === appleX && pos.split('-')[1] === appleY) {
-								appleX = newApplePos();
-								appleY = newApplePos();
-							}
-						}
-						gridMatrix[appleX][appleY] = appleSign;
-					} else {
-						snake.pop();
-						snake.unshift(`${snakeX}-${snakeY + 1}`);
-					}
-					updateGameBoard();
-					++snakeY;
-				} else {
-					gameOver();
-				}	
-			}, snakeSpeed);
-		}
-	}	
-}
-
-function startGame() {
-	start.hidden = true;
-	addEventListener('keydown', keyPressed, true);
-	intervalSet = setInterval(() => {
-		if (snakeY < cols - 1) {
-			snake.pop();
-			snake.unshift(`${snakeX}-${snakeY + 1}`);
-			updateGameBoard();
-			++snakeY;
-		} else {
-			gameOver();
-		}		
-	}, snakeSpeed);
+		}, snakeSpeed);
+	}
 }
 
 function gameOver() {
 	clearInterval(intervalSet);
-	console.log(intervalSet);
 	textInfo.hidden = false;
 	textInfo.innerHTML = "Game Over";
 	reset.hidden = false;
@@ -356,7 +247,7 @@ function restartGame() {
 		grid.deleteRow("<tr>");
 	}
 	gridMatrix = [];
-	snake = [];
+	snakeElements = [];
 	eatenApples = 0;
 	appleX = 5;
 	appleY = 5;
