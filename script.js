@@ -4,8 +4,7 @@ const textInfo = document.getElementById('infoText');
 const reset = document.getElementById("resetGame");
 const applesInfo = document.getElementById("apples");
 const start = document.getElementById("startButton");
-let rows, cols, gridMatrix = [], snakeElements = [], appleSign = "🍎", snakeSign = "⏹", appleX = 5, appleY = 5, 
-snakeX, snakeY, intervalSet, eatenApples = 0, snakeSpeed;
+let rows, cols, gridMatrix = [], snakeElements = [], appleSign = "🍎", snakeSign = "⏹", appleX = 5, appleY = 5, snakeX, snakeY, intervalSet, eatenApples = 0, snakeSpeed;
 
 function generateGameBoard(id) {
 	levelBtn.hidden = true;
@@ -24,9 +23,9 @@ function generateGameBoard(id) {
 		cols = 15;
 		snakeSpeed = 200;
 	}
-	for (let r = 0; r < rows; ++r){
+	for (let r = 0; r < rows; ++r) {
 		let tr = grid.appendChild(document.createElement('tr'));
-		for (let c = 0; c < cols; ++c){
+		for (let c = 0; c < cols; ++c) {
 			let cell = tr.appendChild(document.createElement('td'));
 			cell.id = r + '-' + c;
 		}
@@ -44,7 +43,7 @@ function generateMatrix() {
 	for (let i = 0; i < rows; i++) {
   		gridMatrix[i] = [];
   		for (let j = 0; j < cols; j++) {
-    		gridMatrix[i][j] = "";
+    			gridMatrix[i][j] = "";
   		}
 	}
 }
